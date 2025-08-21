@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>پارسنشر</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: Tahoma, sans-serif; direction: rtl; padding: 20px; background:#f0f2f5; }
+        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+        input, textarea { width: 100%; margin: 5px 0; padding: 10px; border-radius:5px; border:1px solid #ccc; }
+        button { padding:10px 20px; border:none; border-radius:5px; background:#1877f2; color:#fff; cursor:pointer; }
+        .tweet { background:#f1f1f1; padding:10px; margin:10px 0; border-radius:5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>پارسنشر</h2>
+    <div id="user-info"></div>
+    <button id="login-btn">ورود با گوگل</button>
+    <button id="logout-btn" style="display:none;">خروج</button>
+
+    <div id="tweet-box" style="display:none;">
+        <textarea id="tweet-input" placeholder="چی فکر می‌کنید؟"></textarea>
+        <button id="post-btn">ارسال</button>
+    </div>
+
+    <h3>توییت‌ها:</h3>
+    <div id="tweets"></div>
+</div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDbIq00yvB2xJTtqmoUo-xFj10hYEYl9Ac",
+    authDomain: "parsnashr-eb1f3.firebaseapp.com",
+    projectId: "parsnashr-eb1f3",
+    storageBucket: "parsnashr-eb1f3.firebasestorage.app",
+    messagingSenderId: "875762126889",
+    appId: "1:875762126889:web:1f32d90eca2c221ca84c38",
+    measurementId: "G-33SLCFGP3N"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const userInfo = document.getElementById("user-info");
+  const tweetBox = document.getElementById("tweet-box");
+  const postBtn = document.getElementById("post-btn");
+  const tweetInput = document.getElementById("tweet-input");
+  const tweetsDiv = document.getElementById("tweets");
+
+  // Login
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .catch(err => alert("خطا در ورود: " + err.message));
+  }
+
+  // Logout
+  logoutBtn.onclick = () => auth.signOut();
+
+  // Auth state
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      userInfo.innerHTML = `سلام، ${user.displayName}`;
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      tweetBox.style.display = "block";
+      loadTweets();
+    } else {
+      userInfo.innerHTML = "";
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      tweetBox.style.display = "none";
+      tweetsDiv.innerHTML = "";
+    }
+  });
+
+  // Post tweet
+  postBtn.onclick = () => {
+    const text = tweetInput.value.trim();
+    if (!text) return;
+    db.collection("tweets").add({
+      text,
+      user: auth.currentUser.displayName,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    tweetInput.value = "";
+  }
+
+  // Load tweets
+  function loadTweets() {
+    db.collection("tweets").orderBy("timestamp","desc")
+      .onSnapshot(snapshot => {
+        tweetsDiv.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const div = document.createElement("div");
+          div.className = "tweet";
+          div.textContent = `${data.user}: ${data.text}`;
+          tweetsDiv.appendChild(div);
+        });
+      });
+  }
+</script>
+</body>
+</html>
